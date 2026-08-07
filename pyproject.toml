@@ -1,0 +1,9 @@
+[project]
+name = "data-projects"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "delta-spark>=4.3.1",
+    "pyspark>=4.1.1",
+]
