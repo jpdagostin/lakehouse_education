@@ -1,0 +1,10 @@
+evento_id,aluno_id,nome,turma,status,data_evento,fonte_ingestao
+ev001,1001,Maria Silva,7A,ativo,2026-01-05T08:00:00,cdc
+ev002,1001,Maria Silva,7A,ativo,2026-01-05T08:00:00,cdc
+ev003,1001,Maria Silva,7B,ativo,2026-01-10T09:15:00,cdc
+ev004,1002,João Souza,8A,ativo,2026-01-06T10:00:00,cdc
+ev005,1001,Maria Silva,7B,trancado,2026-01-09T14:00:00,cdc
+ev006,1002,João Souza,8A,inativo,2026-01-20T11:30:00,cdc
+ev007,1003,,9A,ativo,2026-01-07T07:45:00,cdc
+ev008,1002,João Souza,8B,ativo,2026-01-15T09:00:00,backfill
+ev009,1003,Ana Costa,9A,ativo,2026-01-07T07:50:00,cdc
