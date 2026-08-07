@@ -9,6 +9,14 @@ wheels/
 # Virtual environments
 .venv
 
+# Testes e cobertura
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Cache do ruff
+.ruff_cache/
 
 data/lake/
 data/lakehouse/
