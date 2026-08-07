@@ -30,9 +30,11 @@ A tabela Silver é escrita via `MERGE` (upsert) quando já existe, e via `overwr
 
 ### Implementado e funcionando
 
-- **Pipeline Bronze -> Silver de matrículas** (`src/lakehouse_bronze_matriculas.py`): lê `data/bronze/bronze_matriculas.csv`, remove duplicatas exatas, aplica prioridade de fonte de ingestão (`cdc` sobre `backfill`) para desempate, faz forward-fill de campos nulos por aluno em ordem cronológica, seleciona o registro mais recente por `aluno_id` e grava em `data/silver/silver_matriculas` como tabela Delta, com merge idempotente.
+- **Pipeline Bronze -> Silver de matrículas** (`src/lakehouse_bronze_matriculas.py`): lê o CSV de matrículas, remove duplicatas exatas, aplica prioridade de fonte de ingestão (`cdc` sobre `backfill`) para desempate, faz forward-fill de campos nulos por aluno em ordem cronológica, seleciona o registro mais recente por `aluno_id` e grava em Delta, com merge idempotente. A lógica é exposta como funções puras (`read_bronze_matriculas`, `transform_bronze_to_silver`, `write_silver_matriculas`) parametrizadas por `spark`/caminhos, para permitir testes isolados sem depender dos arquivos reais em `data/`.
 - **Dados de exemplo**: `data/bronze/bronze_matriculas.csv` e `data/bronze/bronze_eventos.csv` cobrindo casos de duplicidade, múltiplas fontes e campos nulos.
 - **Material de exercícios** (`docs/exercicios_teste_bernoulli.md`): 9 exercícios cobrindo deduplicação, schema evolution, agregações Silver -> Gold, modelagem dimensional (star schema e SCD), particionamento e data skew no Spark, MERGE/time travel/VACUUM no Delta Lake, governança com Unity Catalog e LGPD, e armadilhas de granularidade e overwrite em pipelines incrementais.
+- **Testes automatizados** (`tests/`): suíte `pytest` cobrindo dedup exato, desempate por prioridade de fonte, forward-fill de campos nulos, seleção do registro mais recente e idempotência do merge na Silver, usando `SparkSession` local e arquivos temporários (`tmp_path`), sem tocar em `data/` real.
+- **CI** (`.github/workflows/ci.yml`): pipeline no GitHub Actions que roda lint (`ruff check`), verificação de formatação (`ruff format --check`) e testes com cobertura (`pytest --cov`) a cada push/PR em `main`.
 
 ### Em andamento
 
@@ -43,12 +45,11 @@ A tabela Silver é escrita via `MERGE` (upsert) quando já existe, e via `overwr
 - Pipeline Bronze -> Silver para `bronze_eventos.csv` (eventos de veículo/telemetria), ainda não implementado.
 - Camada Gold com agregações (ex.: `gold_engajamento_turma`, referenciada no Exercício 3), ainda não iniciada porque depende de mais de uma tabela Silver como fonte.
 - Exemplo de schema evolution com Delta (`mergeSchema`), cobrindo o Exercício 2, ainda não implementado no código, apenas descrito no enunciado.
-- Testes automatizados para o pipeline de matrículas, ainda inexistentes; prioridade baixa neste momento porque o projeto é de estudo individual, mas recomendado antes de qualquer reuso em produção.
 
 ## Pré-requisitos
 
 - Python 3.12 ou superior (ver `.python-version`).
-- Java (JDK 11 ou 17) instalado e acessível via `JAVA_HOME`, exigido pelo PySpark.
+- Java (JDK 17, versão usada no CI) instalado e acessível via `JAVA_HOME`, exigido pelo PySpark.
 - [uv](https://docs.astral.sh/uv/) como gerenciador de dependências e ambiente virtual.
 - Acesso à internet na primeira execução, pois `delta-spark` baixa os JARs do Delta Lake via Maven/Ivy na criação da `SparkSession`.
 
@@ -59,10 +60,12 @@ Não há variáveis de ambiente obrigatórias nem serviços externos (banco, fil
 ```bash
 git clone https://github.com/jpdagostin/lakehouse_education.git
 cd lakehouse_education
-uv sync
+uv sync --group dev
 ```
 
-O comando `uv sync` cria o ambiente virtual em `.venv` e instala as dependências travadas em `uv.lock` (`pyspark`, `delta-spark`).
+O comando `uv sync --group dev` cria o ambiente virtual em `.venv` e instala tanto as dependências de execução (`pyspark`, `delta-spark`) quanto as de desenvolvimento (`pytest`, `pytest-cov`, `ruff`), travadas em `uv.lock`. Para instalar apenas as dependências de execução, use `uv sync`.
+
+Se sua máquina tiver múltiplas JDKs instaladas, aponte `JAVA_HOME` explicitamente para uma versão 17 antes de rodar qualquer comando abaixo. JDKs mais recentes (testado com a versão 25) quebram a inicialização do Spark com o erro `JAVA_GATEWAY_EXITED`, pois o Hadoop empacotado no PySpark chama uma API (`Subject.getSubject`) removida nessas versões.
 
 ## Comandos de execução
 
@@ -93,11 +96,20 @@ Não há `Dockerfile` nem `docker-compose.yml` no projeto no momento. A execuç�
 
 ### Rodar testes
 
-Ainda não há suíte de testes automatizados no repositório. Nenhum comando de teste está configurado em `pyproject.toml`.
+```bash
+uv run pytest --cov=src --cov-report=term-missing
+```
+
+Os testes usam `pytest.ini_options` configurado em `pyproject.toml` (`pythonpath = ["src"]`), então os módulos de `src/` são importados diretamente, sem necessidade de instalar o projeto como pacote.
 
 ### Rodar linters/formatadores
 
-Ainda não há linter ou formatter configurado (ex.: `ruff`, `black`) em `pyproject.toml`. Recomenda-se adicionar `ruff` antes de qualquer contribuição maior, dado que o projeto já segue convenções de nomenclatura e comentários consistentes no código existente.
+```bash
+uv run ruff check .
+uv run ruff format .
+```
+
+Use `uv run ruff format --check .` (sem aplicar mudanças) para validar formatação, como feito no CI.
 
 ### Migrations, seeds ou orquestração
 
@@ -107,6 +119,9 @@ Não aplicável: o projeto não usa banco de dados relacional nem orquestrador (
 
 ```
 .
+├── .github/
+│   └── workflows/
+│       └── ci.yml          # pipeline de CI: lint, formatação e testes com cobertura
 ├── data/
 │   ├── raw/               # pouso de arquivos brutos ainda não processados (vazio hoje)
 │   ├── bronze/             # eventos crus em CSV, com duplicidade e campos parciais
@@ -116,7 +131,10 @@ Não aplicável: o projeto não usa banco de dados relacional nem orquestrador (
 │   └── exercicios_teste_bernoulli.md   # exercícios de estudo/preparação técnica
 ├── src/
 │   └── lakehouse_bronze_matriculas.py  # pipeline Bronze -> Silver de matrículas
-├── pyproject.toml         # metadados do projeto e dependências
+├── tests/
+│   ├── conftest.py                     # fixture de SparkSession compartilhada entre testes
+│   └── test_lakehouse_bronze_matriculas.py  # testes do pipeline de matrículas
+├── pyproject.toml         # metadados do projeto, dependências e configuração de pytest/ruff
 ├── uv.lock                # lockfile de dependências geradas pelo uv
 └── .python-version        # versão de Python fixada para o projeto
 ```
@@ -128,10 +146,10 @@ Não aplicável: o projeto não usa banco de dados relacional nem orquestrador (
 - **Branches**: o histórico atual foi desenvolvido diretamente em `main`; para novas features recomenda-se criar branches descritivas (ex.: `feat/gold-engajamento-turma`) antes de abrir PR.
 - **Tipagem**: o schema de leitura do CSV é definido explicitamente via `StructType`/`StructField` em vez de inferido, garantindo leitura determinística e resiliente a variações na origem dos dados.
 - **Tratamento de erros e logging**: o pipeline atual não falha silenciosamente porque depende de operações Spark que já lançam exceção em caso de schema incompatível ou falha de leitura/escrita; não há supressão de exceções (`try/except` vazio) em nenhum ponto do código.
-- **Separação de responsabilidades**: o script de matrículas segue etapas claras e sequenciais (leitura, deduplicação, priorização de fonte, forward-fill, seleção do registro final, escrita), cada uma isolada em um bloco comentado, facilitando extração futura em funções caso o pipeline cresça.
-- **Testes automatizados**: ainda não implementados; ver seção de roadmap. Recomendado antes de qualquer uso do pipeline fora de contexto de estudo.
+- **Separação de responsabilidades**: o pipeline de matrículas é dividido em funções isoladas por etapa (`read_bronze_matriculas`, `transform_bronze_to_silver`, `write_silver_matriculas`), cada uma testável de forma independente, com um orquestrador (`run_bronze_to_silver_matriculas`) e um bloco `if __name__ == "__main__"` separando a lógica de negócio da execução como script.
+- **Testes automatizados**: suíte `pytest` em `tests/` cobre os casos de negócio críticos do pipeline (dedup, prioridade de fonte, forward-fill, seleção do registro mais recente, idempotência do merge), usando `SparkSession` local e dados temporários. Rodada automaticamente no CI a cada push/PR.
 - **Comentários**: o código comenta o "porquê" de cada decisão de negócio (ex.: por que `cdc` tem prioridade sobre `backfill`, por que o dedup ignora `evento_id`), não o "o quê" da sintaxe Spark. Comentários óbvios são evitados.
-- **Linter/formatter**: ainda não configurado; ver seção de roadmap.
+- **Linter/formatter**: `ruff` configurado em `pyproject.toml` (`[tool.ruff]`), rodando tanto localmente quanto como etapa obrigatória do CI (`ruff check` e `ruff format --check`). Ainda não há hook de pre-commit configurado para rodar isso automaticamente antes de cada commit.
 - **Configuração via variáveis de ambiente**: o projeto ainda usa um caminho absoluto hardcoded (`PATH` em `lakehouse_bronze_matriculas.py`) por ser um projeto de estudo local; para qualquer uso além do ambiente de desenvolvimento do autor, esse caminho deveria ser parametrizado via variável de ambiente ou argumento de linha de comando.
 - **Documentação de funções públicas**: o módulo principal usa um docstring de módulo detalhado (contexto de negócio, entrada, saída e efeito colateral) em vez de docstrings por função, já que o script é procedural e não expõe funções reutilizáveis; ao extrair funções, cada uma deve documentar parâmetros, retorno e efeitos colaterais.
 - **Versionamento semântico**: não aplicável no momento, pois o projeto não é publicado como pacote/biblioteca (`pyproject.toml` mantém `version = "0.1.0"` como placeholder de projeto interno).
@@ -148,9 +166,12 @@ Como este é um projeto pessoal de estudo, não há processo formal de revisão 
 
 Checklist antes de abrir PR:
 
+- `uv run ruff check .` e `uv run ruff format --check .` passam sem erro.
+- `uv run pytest --cov=src` passa e cobre o novo comportamento com pelo menos um teste.
 - O pipeline roda de ponta a ponta sem erro com `uv run python src/...`.
 - Nenhum caminho absoluto pessoal foi deixado hardcoded fora do necessário.
 - Novas colunas ou tabelas Delta têm o schema final documentado no PR.
+- O CI (`.github/workflows/ci.yml`) passa no PR antes do merge.
 
 ## Licença e contato
 
