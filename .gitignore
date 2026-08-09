@@ -18,5 +18,8 @@ htmlcov/
 # Cache do ruff
 .ruff_cache/
 
+# Checkpoints do Jupyter
+.ipynb_checkpoints/
+
 data/lake/
 data/lakehouse/
