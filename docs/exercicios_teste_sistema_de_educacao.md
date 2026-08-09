@@ -1,4 +1,4 @@
-# Exercícios de Preparação — Teste Técnico Bernoulli Educação
+# Exercícios de Preparação — Teste Técnico do Sistema de Educação
 
 Simulação de exercícios prováveis para um teste de engenharia/arquitetura de dados, cobrindo arquitetura medallion (Bronze/Silver/Gold), Delta Lake, Databricks e modelagem para consumo por LLM via MCP.
 
@@ -6,7 +6,7 @@ Simulação de exercícios prováveis para um teste de engenharia/arquitetura de
 
 ## Exercício 1 — Deduplicação e "registro mais recente" (Bronze → Silver)
 
-**Contexto de negócio:** A Bernoulli tem um sistema de matrícula de alunos que envia eventos toda vez que um cadastro é criado ou atualizado (mudança de turma, status, dados cadastrais). Esses eventos chegam na camada Bronze via ingestão de CDC (Change Data Capture) de um banco transacional, e podem chegar fora de ordem, duplicados, ou com updates parciais.
+**Contexto de negócio:** O sistema de educação tem um sistema de matrícula de alunos que envia eventos toda vez que um cadastro é criado ou atualizado (mudança de turma, status, dados cadastrais). Esses eventos chegam na camada Bronze via ingestão de CDC (Change Data Capture) de um banco transacional, e podem chegar fora de ordem, duplicados, ou com updates parciais.
 
 **Dataset de exemplo** (`bronze_matriculas.csv`):
 
@@ -47,7 +47,7 @@ Escreva um pipeline (PySpark ou SQL) que transforme `bronze_matriculas` em uma t
 
 ## Exercício 2 — Schema Evolution (novo campo no meio do fluxo)
 
-**Contexto de negócio:** A Bernoulli captura eventos de acesso a uma plataforma de ensino (logins, acessos a videoaulas, submissões de exercícios). Em um certo dia, o time de produto adiciona um novo campo (`dispositivo`) ao evento sem avisar o time de dados, e mais tarde adiciona também um campo aninhado (`metadata`) com informações de app version.
+**Contexto de negócio:** O sistema de educação captura eventos de acesso a uma plataforma de ensino (logins, acessos a videoaulas, submissões de exercícios). Em um certo dia, o time de produto adiciona um novo campo (`dispositivo`) ao evento sem avisar o time de dados, e mais tarde adiciona também um campo aninhado (`metadata`) com informações de app version.
 
 **Dataset de exemplo — dia 1** (`bronze_eventos_dia1.csv`):
 
@@ -133,7 +133,7 @@ Considere que essa tabela Gold será consultada por um agente LLM via MCP para r
 
 ## Exercício 4 — Modelagem dimensional simples para a camada Gold
 
-**Contexto de negócio:** A Bernoulli quer uma camada Gold estruturada como star schema para relatórios de desempenho escolar, cobrindo alunos, escolas, disciplinas e avaliações (provas), permitindo cruzar desempenho ao longo do tempo.
+**Contexto de negócio:** O sistema de educação quer uma camada Gold estruturada como star schema para relatórios de desempenho escolar, cobrindo alunos, escolas, disciplinas e avaliações (provas), permitindo cruzar desempenho ao longo do tempo.
 
 **Dataset de exemplo — tabela de fatos bruta** (`silver_avaliacoes.csv`):
 
@@ -213,7 +213,7 @@ e10,2020,esc04,login,2026-02-01T08:00:00
 
 ## Exercício 6 — Delta Lake: merge/upsert, time travel e versionamento
 
-**Contexto de negócio:** Um sistema acadêmico envia diariamente um snapshot completo de notas de alunos, mas às vezes reprocessa notas de dias anteriores (correção de nota lançada errada) ou envia uma nota duplicada com pequenas variações. A Bernoulli também precisa auditar mudanças de notas para investigar reclamações de pais/alunos.
+**Contexto de negócio:** Um sistema acadêmico envia diariamente um snapshot completo de notas de alunos, mas às vezes reprocessa notas de dias anteriores (correção de nota lançada errada) ou envia uma nota duplicada com pequenas variações. O sistema de educação também precisa auditar mudanças de notas para investigar reclamações de pais/alunos.
 
 **Dataset de exemplo — tabela Delta existente** (`silver_notas` estado atual):
 
@@ -252,7 +252,7 @@ aluno_id,disciplina_id,bimestre,nota,ultima_atualizacao
 
 ## Exercício 7 — Unity Catalog: governança e dados sensíveis (LGPD)
 
-**Contexto de negócio:** A Bernoulli lida com dados de alunos menores de idade (nome, CPF do responsável, endereço, notas). O time de dados precisa dar acesso à camada Gold para analistas de produto e para o agente LLM/MCP, mas sem expor dados pessoais sensíveis, e precisa provar isso em uma auditoria de LGPD.
+**Contexto de negócio:** O sistema de educação lida com dados de alunos menores de idade (nome, CPF do responsável, endereço, notas). O time de dados precisa dar acesso à camada Gold para analistas de produto e para o agente LLM/MCP, mas sem expor dados pessoais sensíveis, e precisa provar isso em uma auditoria de LGPD.
 
 **Dataset de exemplo** (`gold_alunos_perfil.csv`):
 
@@ -279,7 +279,7 @@ aluno_id,nome_completo,cpf_responsavel,data_nascimento,escola_id,email_responsav
 
 ## Exercício 8 — Camada Gold para consulta em linguagem natural via MCP (com pegadinha de granularidade)
 
-**Contexto de negócio:** A Bernoulli quer expor a camada Gold como uma tool MCP para um agente LLM responder perguntas como "qual escola teve a maior evolução de nota entre o 1º e o 2º bimestre?" ou "quantos alunos estão com risco de reprovação em matemática?". O time te entrega duas tabelas Gold já prontas e pede pra você validar se elas são suficientes, sem te contar que existe um problema de modelagem escondido.
+**Contexto de negócio:** O sistema de educação quer expor a camada Gold como uma tool MCP para um agente LLM responder perguntas como "qual escola teve a maior evolução de nota entre o 1º e o 2º bimestre?" ou "quantos alunos estão com risco de reprovação em matemática?". O time te entrega duas tabelas Gold já prontas e pede pra você validar se elas são suficientes, sem te contar que existe um problema de modelagem escondido.
 
 **Dataset de exemplo** (`gold_notas_bimestre.csv`, granularidade aluno+disciplina+bimestre):
 
@@ -366,6 +366,6 @@ dia,escola_id,total_alunos,total_presentes
 
 ## Observação geral
 
-Todos os exercícios assumem o padrão medallion (Bronze → Silver → Gold) que a Bernoulli usa. Os exercícios 3, 6, 7 e 8 já apontam explicitamente para o consumo via MCP/LLM e para governança, que parecem ser diferenciais da vaga. O exercício 9 cobre a leitura alternativa da pegadinha que o Nielk comentou (overwrite mode), caso não seja a de window function coberta em `treino_teste`. Vale treinar explicando em voz alta *por que* cada decisão de modelagem facilita ou dificulta consultas em linguagem natural, e *por que* uma decisão de governança protege ou não protege dado sensível — isso pode ser um ponto de discussão na entrevista, não só no teste técnico.
+Todos os exercícios assumem o padrão medallion (Bronze → Silver → Gold) que o sistema de educação usa. Os exercícios 3, 6, 7 e 8 já apontam explicitamente para o consumo via MCP/LLM e para governança, que parecem ser diferenciais da vaga. O exercício 9 cobre a leitura alternativa da pegadinha que o Nielk comentou (overwrite mode), caso não seja a de window function coberta em `treino_teste`. Vale treinar explicando em voz alta *por que* cada decisão de modelagem facilita ou dificulta consultas em linguagem natural, e *por que* uma decisão de governança protege ou não protege dado sensível — isso pode ser um ponto de discussão na entrevista, não só no teste técnico.
 
 Manda sua solução de qualquer um deles que eu reviso.

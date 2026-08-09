@@ -32,7 +32,7 @@ A tabela Silver é escrita via `MERGE` (upsert) quando já existe, e via `overwr
 
 - **Pipeline Bronze -> Silver de matrículas** (`src/lakehouse_bronze_matriculas.py`): lê o CSV de matrículas, remove duplicatas exatas, aplica prioridade de fonte de ingestão (`cdc` sobre `backfill`) para desempate, faz forward-fill de campos nulos por aluno em ordem cronológica, seleciona o registro mais recente por `aluno_id` e grava em Delta, com merge idempotente. A lógica é exposta como funções puras (`read_bronze_matriculas`, `transform_bronze_to_silver`, `write_silver_matriculas`) parametrizadas por `spark`/caminhos, para permitir testes isolados sem depender dos arquivos reais em `data/`.
 - **Dados de exemplo**: `data/bronze/bronze_matriculas.csv` e `data/bronze/bronze_eventos.csv` cobrindo casos de duplicidade, múltiplas fontes e campos nulos.
-- **Material de exercícios** (`docs/exercicios_teste_bernoulli.md`): 9 exercícios cobrindo deduplicação, schema evolution, agregações Silver -> Gold, modelagem dimensional (star schema e SCD), particionamento e data skew no Spark, MERGE/time travel/VACUUM no Delta Lake, governança com Unity Catalog e LGPD, e armadilhas de granularidade e overwrite em pipelines incrementais.
+- **Material de exercícios** (`docs/exercicios_teste_sistema_de_educacao.md`): 9 exercícios cobrindo deduplicação, schema evolution, agregações Silver -> Gold, modelagem dimensional (star schema e SCD), particionamento e data skew no Spark, MERGE/time travel/VACUUM no Delta Lake, governança com Unity Catalog e LGPD, e armadilhas de granularidade e overwrite em pipelines incrementais.
 - **Pipeline Raw -> Bronze de eventos de acesso** (`src/lakehouse_bronze_eventos_acesso.py`, Exercício 2 do material de estudo): consolida três lotes de eventos de acesso à plataforma (`data/raw/raw_eventos_dia_1.csv`, `raw_eventos_dia_2.csv`, `raw_eventos_dia_3.json`), cada um com um schema diferente (o dia 2 adiciona a coluna `dispositivo`; o dia 3 adiciona o campo aninhado `metadata` e chega em JSON em vez de CSV), em uma única tabela Delta `bronze_eventos_acesso`, usando leitura genérica por formato (`read_raw_eventos_batch`) e escrita incremental com evolução automática de schema (`append` + `mergeSchema=true`). Registros de lotes anteriores a uma coluna nova passam a tê-la como `null`, sem perda ou truncamento de dado.
 - **Testes automatizados** (`tests/`): suíte `pytest` cobrindo dedup exato, desempate por prioridade de fonte, forward-fill de campos nulos, seleção do registro mais recente e idempotência do merge na Silver (matrículas), além de evolução de schema entre lotes e consulta tolerante a campo aninhado ausente (eventos de acesso), usando `SparkSession` local e arquivos temporários (`tmp_path`), sem tocar em `data/` real.
 - **CI** (`.github/workflows/ci.yml`): pipeline no GitHub Actions que roda lint (`ruff check`), verificação de formatação (`ruff format --check`) e testes com cobertura (`pytest --cov`) a cada push/PR em `main`.
@@ -128,7 +128,7 @@ Não aplicável: o projeto não usa banco de dados relacional nem orquestrador (
 │   ├── silver/             # tabelas Delta consolidadas (parquet + _delta_log)
 │   └── gold/               # métricas agregadas para consumo analítico (planejado, vazio hoje)
 ├── docs/
-│   └── exercicios_teste_bernoulli.md   # exercícios de estudo/preparação técnica
+│   └── exercicios_teste_sistema_de_educacao.md   # exercícios de estudo/preparação técnica
 ├── src/
 │   └── lakehouse_bronze_matriculas.py  # pipeline Bronze -> Silver de matrículas
 ├── tests/
