@@ -1,0 +1,4 @@
+[
+  {"evento_id": "e3001", "aluno_id": 2001, "tipo_evento": "login", "timestamp": "2026-02-03T08:00:00", "dispositivo": "mobile", "metadata": {"app_version": "4.2.1", "os": "android"}},
+  {"evento_id": "e3002", "aluno_id": 2002, "tipo_evento": "submissao_exercicio", "timestamp": "2026-02-03T09:00:00", "dispositivo": "web", "metadata": null}
+]

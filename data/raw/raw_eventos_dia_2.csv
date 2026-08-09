@@ -1,0 +1,4 @@
+evento_id,aluno_id,tipo_evento,timestamp,dispositivo
+e2001,2001,login,2026-02-02T08:00:00,mobile
+e2002,2003,login,2026-02-02T08:30:00,web
+e2003,2003,acesso_videoaula,2026-02-02T08:45:00,web
