@@ -30,7 +30,7 @@ from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, StructField, StructType
 
-DEFAULT_PATH = "/Users/jpdagostin/Desktop/personal/lakehouse_education/data/"
+DEFAULT_PATH = "/Users/jpdagostin/Desktop/personal/lakehouseEducation/lakehouse_education/data/"
 
 BRONZE_MATRICULAS_SCHEMA = StructType(
     [
