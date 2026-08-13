@@ -32,7 +32,7 @@ from pyspark.sql import functions as F
 
 from lakehouse_bronze_matriculas import create_spark_session
 
-DEFAULT_PATH = "/Users/jpdagostin/Desktop/personal/lakehouse_education/data/"
+DEFAULT_PATH = "/Users/jpdagostin/Desktop/personal/lakehouseEducation/lakehouse_education/data/"
 
 
 def read_raw_eventos_batch(

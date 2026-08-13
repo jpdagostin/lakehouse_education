@@ -40,7 +40,7 @@ from pyspark.sql.types import (
 
 from lakehouse_bronze_matriculas import create_spark_session
 
-DEFAULT_PATH = "/Users/jpdagostin/Desktop/personal/lakehouse_education/data/"
+DEFAULT_PATH = "/Users/jpdagostin/Desktop/personal/lakehouseEducation/lakehouse_education/data/"
 
 SILVER_SUBMISSOES_SCHEMA = StructType(
     [
