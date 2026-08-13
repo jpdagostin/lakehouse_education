@@ -1,0 +1,11 @@
+submissao_id,aluno_id,escola_id,turma_id,disciplina,data_submissao,correta,tempo_gasto_segundos
+s001,2001,esc01,7A,matematica,2026-02-01,true,120
+s002,2001,esc01,7A,matematica,2026-02-02,false,300
+s003,2002,esc01,7A,matematica,2026-02-01,true,90
+s004,2003,esc01,7B,matematica,2026-02-03,true,150
+s005,2004,esc02,8A,portugues,2026-02-01,false,200
+s006,2004,esc02,8A,portugues,2026-02-02,true,60
+s007,2005,esc02,8A,portugues,2026-02-04,true,80
+s008,2001,esc01,7A,portugues,2026-02-05,true,110
+s009,2003,esc01,7B,matematica,2026-02-10,false,400
+s010,2002,esc01,7A,matematica,2026-02-15,true,95
