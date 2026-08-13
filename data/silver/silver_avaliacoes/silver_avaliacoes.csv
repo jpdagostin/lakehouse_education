@@ -1,0 +1,7 @@
+avaliacao_id,aluno_id,escola_id,disciplina_id,data_avaliacao,nota,nota_maxima,tipo_avaliacao
+a001,1001,esc01,disc_mat,2026-01-15,8.5,10,prova_bimestral
+a002,1002,esc01,disc_mat,2026-01-15,7.0,10,prova_bimestral
+a003,1003,esc01,disc_port,2026-01-20,9.0,10,prova_bimestral
+a004,1001,esc02,disc_port,2026-01-22,6.5,10,simulado
+a005,1002,esc02,disc_port,2026-01-25,10.0,10,simulado
+a005,1003,esc02,disc_mat,2026-01-25,10.0,10,simulado
