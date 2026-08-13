@@ -34,7 +34,9 @@ A tabela Silver é escrita via `MERGE` (upsert) quando já existe, e via `overwr
 - **Dados de exemplo**: `data/bronze/bronze_matriculas.csv` e `data/bronze/bronze_eventos.csv` cobrindo casos de duplicidade, múltiplas fontes e campos nulos.
 - **Material de exercícios** (`docs/exercicios_teste_sistema_de_educacao.md`): 9 exercícios cobrindo deduplicação, schema evolution, agregações Silver -> Gold, modelagem dimensional (star schema e SCD), particionamento e data skew no Spark, MERGE/time travel/VACUUM no Delta Lake, governança com Unity Catalog e LGPD, e armadilhas de granularidade e overwrite em pipelines incrementais.
 - **Pipeline Raw -> Bronze de eventos de acesso** (`src/lakehouse_bronze_eventos_acesso.py`, Exercício 2 do material de estudo): consolida três lotes de eventos de acesso à plataforma (`data/raw/raw_eventos_dia_1.csv`, `raw_eventos_dia_2.csv`, `raw_eventos_dia_3.json`), cada um com um schema diferente (o dia 2 adiciona a coluna `dispositivo`; o dia 3 adiciona o campo aninhado `metadata` e chega em JSON em vez de CSV), em uma única tabela Delta `bronze_eventos_acesso`, usando leitura genérica por formato (`read_raw_eventos_batch`) e escrita incremental com evolução automática de schema (`append` + `mergeSchema=true`). Registros de lotes anteriores a uma coluna nova passam a tê-la como `null`, sem perda ou truncamento de dado.
-- **Testes automatizados** (`tests/`): suíte `pytest` cobrindo dedup exato, desempate por prioridade de fonte, forward-fill de campos nulos, seleção do registro mais recente e idempotência do merge na Silver (matrículas), além de evolução de schema entre lotes e consulta tolerante a campo aninhado ausente (eventos de acesso), usando `SparkSession` local e arquivos temporários (`tmp_path`), sem tocar em `data/` real.
+- **Pipeline Silver -> Gold de engajamento por turma** (`src/lakehouse_gold_engajamento_turma.py`, Exercício 3 do material de estudo): agrega `silver_submissoes` por `escola_id`/`turma_id`/`disciplina`/mês, calculando total de submissões, taxa de acerto, tempo médio gasto e alunos distintos, com escrita idempotente (overwrite na primeira execução, `MERGE` nas seguintes).
+- **Pipeline Silver -> Gold em star schema para avaliações** (`src/lakehouse_gold_star_schema_avaliacoes.py`, Exercício 4 do material de estudo): modela `fato_avaliacoes` e as dimensões `dim_aluno`, `dim_escola`, `dim_disciplina` e `dim_tempo` a partir de `silver_avaliacoes`, `silver_escolas`, `silver_disciplinas` e `silver_matriculas` (única fonte disponível de atributos de aluno, já que não existe uma `silver_alunos` dedicada). `dim_escola` implementa SCD tipo 2 (histórico de mudança de atributo, ex.: mudança de `rede`, via `data_inicio_validade`/`data_fim_validade`/`flag_atual`); `dim_aluno` e `dim_disciplina` são dimensões de estado atual; `dim_tempo` é um calendário completo gerado (não derivado do fato). Chaves substitutas via `sha2` determinístico da chave natural (exceto `dim_escola`, cuja chave incorpora o timestamp de escrita da versão, necessário para diferenciar múltiplas versões da mesma escola).
+- **Testes automatizados** (`tests/`): suíte `pytest` cobrindo dedup exato, desempate por prioridade de fonte, forward-fill de campos nulos, seleção do registro mais recente e idempotência do merge na Silver (matrículas), evolução de schema entre lotes e consulta tolerante a campo aninhado ausente (eventos de acesso), agregações e granularidade da Gold de engajamento, e SCD2/calendário/resolução de FK por data no star schema de avaliações, usando `SparkSession` local e arquivos temporários (`tmp_path`), sem tocar em `data/` real.
 - **CI** (`.github/workflows/ci.yml`): pipeline no GitHub Actions que roda lint (`ruff check`), verificação de formatação (`ruff format --check`) e testes com cobertura (`pytest --cov`) a cada push/PR em `main`.
 
 ### Em andamento
@@ -43,8 +45,7 @@ A tabela Silver é escrita via `MERGE` (upsert) quando já existe, e via `overwr
 
 ### Roadmap / próximos passos
 
-- Camada Gold com agregações (ex.: `gold_engajamento_turma`, referenciada no Exercício 3), ainda não iniciada porque depende de mais de uma tabela Silver como fonte.
-- Exercícios 4 a 9 do material de estudo (modelagem dimensional, particionamento e data skew, MERGE/time travel/VACUUM, governança Unity Catalog/LGPD, granularidade para consumo via MCP, pegadinha de overwrite incremental): ainda não implementados, apenas descritos no enunciado.
+- Exercícios 5 a 9 do material de estudo (particionamento e data skew, MERGE/time travel/VACUUM, governança Unity Catalog/LGPD, granularidade para consumo via MCP, pegadinha de overwrite incremental): ainda não implementados, apenas descritos no enunciado.
 
 ## Pré-requisitos
 
@@ -125,15 +126,21 @@ Não aplicável: o projeto não usa banco de dados relacional nem orquestrador (
 ├── data/
 │   ├── raw/               # pouso de arquivos brutos ainda não processados (vazio hoje)
 │   ├── bronze/             # eventos crus em CSV, com duplicidade e campos parciais
-│   ├── silver/             # tabelas Delta consolidadas (parquet + _delta_log)
-│   └── gold/               # métricas agregadas para consumo analítico (planejado, vazio hoje)
+│   ├── silver/             # tabelas/CSVs consolidados por entidade (matrículas, submissões, avaliações, escolas, disciplinas)
+│   └── gold/               # métricas agregadas e star schema para consumo analítico
 ├── docs/
 │   └── exercicios_teste_sistema_de_educacao.md   # exercícios de estudo/preparação técnica
 ├── src/
-│   └── lakehouse_bronze_matriculas.py  # pipeline Bronze -> Silver de matrículas
+│   ├── lakehouse_bronze_matriculas.py            # pipeline Bronze -> Silver de matrículas
+│   ├── lakehouse_bronze_eventos_acesso.py        # pipeline Raw -> Bronze de eventos de acesso
+│   ├── lakehouse_gold_engajamento_turma.py       # pipeline Silver -> Gold de engajamento por turma
+│   └── lakehouse_gold_star_schema_avaliacoes.py  # pipeline Silver -> Gold: star schema de avaliações
 ├── tests/
-│   ├── conftest.py                     # fixture de SparkSession compartilhada entre testes
-│   └── test_lakehouse_bronze_matriculas.py  # testes do pipeline de matrículas
+│   ├── conftest.py                                    # fixture de SparkSession compartilhada entre testes
+│   ├── test_lakehouse_bronze_matriculas.py             # testes do pipeline de matrículas
+│   ├── test_lakehouse_bronze_eventos_acesso.py         # testes do pipeline de eventos de acesso
+│   ├── test_lakehouse_gold_engajamento_turma.py        # testes do pipeline de engajamento por turma
+│   └── test_lakehouse_gold_star_schema_avaliacoes.py   # testes do star schema de avaliações
 ├── pyproject.toml         # metadados do projeto, dependências e configuração de pytest/ruff
 ├── uv.lock                # lockfile de dependências geradas pelo uv
 └── .python-version        # versão de Python fixada para o projeto
